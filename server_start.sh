@@ -4,5 +4,4 @@
 g++ -o server ./Server.cpp
 
 # start server
-./server
-echo "Server running"
+./server 

@@ -1,5 +1,3 @@
-// Created by Duncan Spani and Jayden Stipek
-// 2020/11/11
 
 #include <sys/socket.h> // socket, bind, listen, inet_ntoa
 #include <sys/time.h>   //for gettimeofday()
@@ -11,21 +9,23 @@
 #include <sys/uio.h>    // writev
 #include <cstdlib>
 #include <iostream>
-#include <cassert>
+// #include <cassert>
 #include <cstring>
 #include <pthread.h>
 #include <fstream>
 
 /*Server.CPP
-*Your server waits for a connection and an HTTP GET request (Please perform multi-threaded handling).
-Your server only needs to respond to HTTP GET request.
-After receiving the GET request
-*If the file exists, the server opens the file that is requested and sends it (along with the HTTP 200 OK code, of course).
-If the file requested does not exist, the server should return a 404 Not Found code along with a custom File Not Found page.
-If the HTTP request is for SecretFile.html then the web server should return a 401 Unauthorized.
-If the request is for a file that is above the directory structure where your web server is running ( for example, "GET ../../../etc/passwd" ), you should return a 403 Forbidden.
-Finally, if your server cannot understand the request, return a 400 Bad Request.
-After you handle the request, your server should return to waiting for the next request.
+1. Your server waits for a connection and an HTTP GET request (perform multi-threaded handling).
+2. Your server only needs to respond to HTTP GET request.
+3. After receiving the GET request if the file exists, the server opens the file that is requested and sends it
+(along with the HTTP 200 OK code, of course).
+4. If the file requested does not exist,
+the server should return a 404 Not Found code along with a custom File Not Found page.
+5. If the HTTP request is for SecretFile.html then the web server should return a 401 Unauthorized.
+6. If the request is for a file that is above the directory structure where your web server is running
+( for example, "GET ../../../etc/passwd" ), you should return a 403 Forbidden.
+7. Finally, if your server cannot understand the request, return a 400 Bad Request.
+8. After you handle the request, your server should return to waiting for the next request.
 */
 using namespace std;
 
@@ -35,8 +35,7 @@ const string UNAUTHORIZED = "HTTP/1.1 401 Unauthorized\r\n";
 const string FORBIDDEN = "HTTP/1.1 403 Forbidden\r\n";
 const string BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\n";
 
-const int PORT = 80;
-string file_content = "./file";
+const int PORT = 8888;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int clientSD;
 int serverSD;
@@ -59,10 +58,11 @@ string read_data()
     while (true)
     {
         char current = 0;
+        // receive data from client using read
         recv(clientSD, &current, 1, 0);
         if (current == '\n' || current == '\r')
         {
-            if (end == '\r' && current == '\n')
+            if (end == '\r' && current == '\n') // to the end '\r\n' in windows
                 break;
         }
         else
@@ -104,6 +104,7 @@ Request parse_request(string request)
         else
             str += request[i];
     }
+    return parsed;
 }
 
 /**
@@ -201,6 +202,7 @@ void contruct_response(Request &request, string &status, string &file_content)
         file_content = BAD_REQUEST;
     }
 }
+
 /**
  * Thread function constructs the message that will be sent back to the
  * Retriever
@@ -217,8 +219,10 @@ void *thread_function(void *dummyPtr)
 
     // parse request
     Request parsed = parse_request(request);
+
     // construct response
     string code;
+    string file_content;
     contruct_response(parsed, code, file_content);
     string pageLength = to_string(file_content.size());
     string response = code +
@@ -240,44 +244,70 @@ void *thread_function(void *dummyPtr)
  **/
 int main() // 0 args
 {
-    // setup socket addr
-    sockaddr_in acceptSockAddr;
-    // empty addr
-    bzero((char *)&acceptSockAddr, sizeof(acceptSockAddr));
-    acceptSockAddr.sin_family = AF_INET; // Address Family Internet
-    acceptSockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    acceptSockAddr.sin_port = htons(PORT);
+    // Setup your server's socket address structure
+    sockaddr_in serv_addr;
+    //  Clear it out, and set its parameters
+    bzero((char *)&serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;                // use IPv4
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); // fill in server IP address
+    // serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serv_addr.sin_port = htons(PORT); // convert port number to network byte order and set port
 
-    serverSD = socket(AF_INET, SOCK_STREAM, 0);
+    // Create your TCP socket
+    serverSD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); // ipv4, connect, TCP
+    if (serverSD == -1)
+    {
+        std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
+        return -1;
+    }
 
-    const int on = 1;
-    int set = setsockopt(serverSD, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(int));
+    //? const int on = 1;
+    // int set = setsockopt(serverSD, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(int));
 
-    int rc = bind(serverSD, (sockaddr *)&acceptSockAddr, sizeof(acceptSockAddr));
+    // Bind socket to IP address and port on server
+    bind(serverSD, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    // if (bind(serverSD, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
+    // {
+    //     std::cerr << "Error binding socket: " << strerror(errno) << std::endl;
+    //     return -1;
+    // }
+
     cout << "Socket Created" << endl;
-    int listenSocket = listen(serverSD, 1);
+
+    // Listen on the socket for new connections to be made
+    // 20 references the size of the queue of outstanding (non-accepted) requests we will store
+    if (listen(serverSD, 20) == -1)
+    {
+        std::cerr << "Error listening to socket: " << strerror(errno) << std::endl;
+        return -1;
+    }
 
     while (true)
-    { // create client sd
-        sockaddr_in clientSockAddr;
-        socklen_t clientSockAddrSize = sizeof(clientSockAddr);
+    {
+        // create client sd
+        sockaddr_in cli_addr;
+        socklen_t cli_addrSize = sizeof(cli_addr);
 
         cout << "Listening on port: " << PORT << endl;
         // accept client
-        clientSD = accept(serverSD, (sockaddr *)&clientSockAddr,
-                          &clientSockAddrSize);
-        assert(clientSD != 0);
+        clientSD = accept(serverSD, (struct sockaddr *)&cli_addr, &cli_addrSize);
+        if (clientSD == -1)
+        {
+            std::cerr << "Error accepting connection: " << strerror(errno) << std::endl;
+            return -1;
+        }
+        // assert(clientSD != 0);
 
-        cout << "Client Connected" << endl;
+        cout << "Client Connected: Server accepted connection from " << inet_ntoa(cli_addr.sin_addr) << " on port " << ntohs(cli_addr.sin_port) << endl;
+
         pthread_t thread_id; // create thread
-
-        // std::cout <<"main() : creating thread, " << std::endl;
-        int ThreadResult = pthread_create(&thread_id, NULL, thread_function, NULL);
-
-        if (ThreadResult != 0)
+        if (pthread_create(&thread_id, NULL, thread_function, NULL) != 0)
         {
             cout << "unable to create thread." << std::endl;
             continue;
         }
     }
+
+    close(serverSD);
+    return 0;
 }
