@@ -7,7 +7,7 @@
 
 int main(){
     //创建套接字
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     //向服务器（特定的IP和端口）发起请求
     struct sockaddr_in serv_addr;
@@ -19,7 +19,7 @@ int main(){
    
     //读取服务器传回的数据
     char buffer[40];
-    read(sock, buffer, sizeof(buffer)-1);
+    recv(sock, buffer, sizeof(buffer)-1,0);
    
     printf("Message form server: %s\n", buffer);
    

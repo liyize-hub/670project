@@ -254,15 +254,15 @@ int main() // 0 args
     serv_addr.sin_port = htons(PORT); // convert port number to network byte order and set port
 
     // Create your TCP socket
-    serverSD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); // ipv4, connect, TCP
+    serverSD = socket(AF_INET, SOCK_STREAM, 0); // ipv4, connect
     if (serverSD == -1)
     {
         std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
         return -1;
     }
 
-    //? const int on = 1;
-    // int set = setsockopt(serverSD, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(int));
+    const int on = 1;
+    int set = setsockopt(serverSD, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(int));
 
     // Bind socket to IP address and port on server
     bind(serverSD, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
@@ -307,7 +307,4 @@ int main() // 0 args
             continue;
         }
     }
-
-    close(serverSD);
-    return 0;
 }

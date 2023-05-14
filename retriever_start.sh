@@ -8,13 +8,13 @@ g++ -o retriever ./Retriever.cpp
 
 # start retriever
 # 401 unauthorized
-./retriever /Users/kiddli/Downloads/CSS432HW2-main/other/SecretFile.html
+./retriever 127.0.0.1/content.txt
 # # 200 ok
-# ./retriever 64.227.48.38/content.txt
+# ./retriever 127.0.0.1/content.txt
 # # 403 forbidden
-# ./retriever 64.227.48.38/../file.html
+# ./retriever 127.0.0.1/../file.html
 # # 200 ok
-# ./retriever 64.227.48.38/content.txt
+# ./retriever 127.0.0.1/content.txt
 # # 404 not found
-# ./retriever 64.227.48.38/././/hjklh
+# ./retriever 127.0.0.1/././/hjklh
 

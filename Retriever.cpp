@@ -28,7 +28,7 @@ then the retriever should not save the file and should display on the screen wha
 using namespace std; 
 char *server_address;
 char *web_file;
-const int PORT_NUMBER = 80;
+const int PORT_NUMBER = 8888;
 
 int settingUpSocket(char* argv[]);
 int callGetRequest(int socketFD);
@@ -88,9 +88,9 @@ int settingUpSocket(char* argv[]){
             inet_addr(inet_ntoa(*(struct in_addr*)*host->h_addr_list));
     sendSockAddr.sin_port = htons(PORT_NUMBER);
 
-
     // 1) Open a new socket and establish a connection to a server.
     int serverFD = socket(AF_INET, SOCK_STREAM, 0);
+
     if(serverFD == 0)
     {
         cout << "Error! Socket failed. " << std::endl;
@@ -118,7 +118,7 @@ int callGetRequest(int socketFD)
                             "Host: " + string(server_address) + "\r\n" +
                             "\r\n"); // a get request is ended with a \r\n\r\n
 
-    cout << "Request Sent " << request << endl;
+    cout << "Request Sent: " << request << endl;
     int sendRequest = send(socketFD, request.c_str(), strlen(request.c_str()), 0);
     if(sendRequest <= 0)
     {

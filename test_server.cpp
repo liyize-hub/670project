@@ -32,7 +32,7 @@ int main()
 
     // 向客户端发送数据
     char str[] = "Hello World!";
-    write(clnt_sock, str, sizeof(str));
+    send(clnt_sock, str, sizeof(str),0);
 
     // 关闭套接字
     close(clnt_sock);
