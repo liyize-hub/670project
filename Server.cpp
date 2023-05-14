@@ -35,10 +35,9 @@ const string UNAUTHORIZED = "HTTP/1.1 401 Unauthorized\r\n";
 const string FORBIDDEN = "HTTP/1.1 403 Forbidden\r\n";
 const string BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\n";
 
-const int PORT = 8888;
+const int PORT = 1024;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-int clientSD;
-int serverSD;
+
 // Struct for Requests given to the server
 struct Request
 {
@@ -51,7 +50,7 @@ struct Request
  * Parsing the data from and incomming request
  * from a client returning a string from the response
  **/
-string read_data()
+string read_data(int clifd)
 {
     string response = "";
     char end = 0;
@@ -59,7 +58,7 @@ string read_data()
     {
         char current = 0;
         // receive data from client using read
-        recv(clientSD, &current, 1, 0);
+        recv(clifd, &current, 1, 0);
         if (current == '\n' || current == '\r')
         {
             if (end == '\r' && current == '\n') // to the end '\r\n' in windows
@@ -208,13 +207,15 @@ void contruct_response(Request &request, string &status, string &file_content)
  * Retriever
  * @param void *
  **/
-void *thread_function(void *dummyPtr)
+void *thread_function(void *arg)
 {
+    int clifd = *(int *)arg;
+
     // use port 80 for http
     pthread_mutex_lock(&mutex1);
 
     // read request
-    string request = read_data();
+    string request = read_data(clifd);
     cout << "Request: " << request << endl;
 
     // parse request
@@ -231,11 +232,11 @@ void *thread_function(void *dummyPtr)
     cout << response << endl;
 
     // write response
-    int sendResponse = send(clientSD, response.c_str(), strlen(response.c_str()), 0);
+    int sendResponse = send(clifd, response.c_str(), strlen(response.c_str()), 0);
 
     pthread_mutex_unlock(&mutex1);
-    close(clientSD);
-    return nullptr;
+    close(clifd);
+    pthread_exit(NULL);
 }
 
 /**
@@ -254,7 +255,7 @@ int main() // 0 args
     serv_addr.sin_port = htons(PORT); // convert port number to network byte order and set port
 
     // Create your TCP socket
-    serverSD = socket(AF_INET, SOCK_STREAM, 0); // ipv4, connect
+    int serverSD = socket(AF_INET, SOCK_STREAM, 0); // ipv4, connect
     if (serverSD == -1)
     {
         std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
@@ -281,6 +282,7 @@ int main() // 0 args
         std::cerr << "Error listening to socket: " << strerror(errno) << std::endl;
         return -1;
     }
+    int i = 0;
 
     while (true)
     {
@@ -290,7 +292,7 @@ int main() // 0 args
 
         cout << "Listening on port: " << PORT << endl;
         // accept client
-        clientSD = accept(serverSD, (struct sockaddr *)&cli_addr, &cli_addrSize);
+        int clientSD = accept(serverSD, (struct sockaddr *)&cli_addr, &cli_addrSize);
         if (clientSD == -1)
         {
             std::cerr << "Error accepting connection: " << strerror(errno) << std::endl;
@@ -298,13 +300,14 @@ int main() // 0 args
         }
         // assert(clientSD != 0);
 
-        cout << "Client Connected: Server accepted connection from " << inet_ntoa(cli_addr.sin_addr) << " on port " << ntohs(cli_addr.sin_port) << endl;
+        cout << "Client Connected:" << inet_ntoa(cli_addr.sin_addr) << " on port " << ntohs(cli_addr.sin_port) << endl;
 
         pthread_t thread_id; // create thread
-        if (pthread_create(&thread_id, NULL, thread_function, NULL) != 0)
+        if (pthread_create(&thread_id, NULL, thread_function, &clientSD) != 0)
         {
             cout << "unable to create thread." << std::endl;
-            continue;
+            return -1;
         }
     }
+    pthread_exit(NULL);
 }

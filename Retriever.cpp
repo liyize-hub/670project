@@ -28,7 +28,7 @@ then the retriever should not save the file and should display on the screen wha
 using namespace std; 
 char *server_address;
 char *web_file;
-const int PORT_NUMBER = 8888;
+const int PORT_NUMBER = 1024;
 
 int settingUpSocket(char* argv[]);
 int callGetRequest(int socketFD);
