@@ -10,7 +10,9 @@
 #include <cstdlib>
 #include <iostream>
 // #include <cassert>
-#include <cstring>
+#include <chrono>
+#include <string>
+#include <unordered_map>
 #include <pthread.h>
 #include <fstream>
 
@@ -35,7 +37,7 @@ const string UNAUTHORIZED = "HTTP/1.1 401 Unauthorized\r\n";
 const string FORBIDDEN = "HTTP/1.1 403 Forbidden\r\n";
 const string BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\n";
 
-const int PORT = 1024;
+const int PORT = 8888;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 // Struct for Requests given to the server
@@ -46,6 +48,28 @@ struct Request
     string protocol;
 };
 
+std::unordered_map<std::string, std::string> mime = {
+    {"html", "text/html"},
+    {"txt", "text/plain"},
+    {"jpg", "image/jpeg"},
+    {"gif", " image/gif"}};
+
+string get_file_extension(string s)
+{
+    int i;
+    while (i < s.length())
+    {
+        if (s[i++] == '.')
+        {
+            break;
+        }
+    }
+    if (i == s.length())
+    {
+        return "";
+    }
+    return s.substr(i, s.length());
+}
 /**
  * Parsing the data from and incomming request
  * from a client returning a string from the response
@@ -220,15 +244,31 @@ void *thread_function(void *arg)
 
     // parse request
     Request parsed = parse_request(request);
+    string file_name;
+    if (parsed.uri != "")
+    {
+        file_name = get_file_extension(parsed.uri);
+    }
+    string content_type;
+    if (file_name != "")
+    {
+        content_type = mime[file_name];
+    }
 
     // construct response
     string code;
     string file_content;
     contruct_response(parsed, code, file_content);
     string pageLength = to_string(file_content.size());
+    // 获取当前时间点
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+
+    // 将时间点转化为时间戳
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+
     string response = code +
-                      "Content-Length: " + pageLength + "\r\n" + "Content-Type: text/plain\r\n" +
-                      "\r\n" + file_content;
+                      "Content-Length: " + pageLength + "\r\n" + "Content-Type:" + content_type + "\r\n" +
+                      "\r\n" + std::ctime(&now_c) + "\r\n" + file_content;
     cout << response << endl;
 
     // write response
