@@ -48,11 +48,7 @@ struct Request
     string protocol;
 };
 
-std::unordered_map<std::string, std::string> mime = {
-    {"html", "text/html"},
-    {"txt", "text/plain"},
-    {"jpg", "image/jpeg"},
-    {"gif", " image/gif"}};
+std::unordered_map<std::string, std::string> mime;
 
 string get_file_extension(string s)
 {
@@ -268,7 +264,7 @@ void *thread_function(void *arg)
 
     string response = code +
                       "Content-Length: " + pageLength + "\r\n" + "Content-Type:" + content_type + "\r\n" +
-                      "\r\n" + std::ctime(&now_c) + "\r\n" + file_content;
+                      +std::ctime(&now_c) + "\r\n" + file_content;
     cout << response << endl;
 
     // write response
@@ -285,6 +281,10 @@ void *thread_function(void *arg)
  **/
 int main() // 0 args
 {
+    mime.insert(make_pair("html", "text/html"));
+    mime.insert(make_pair("txt", "text/plain"));
+    mime.insert(make_pair("jpg", "image/jpeg"));
+    mime.insert(make_pair("gif", " image/gif"));
     // Setup your server's socket address structure
     sockaddr_in serv_addr;
     //  Clear it out, and set its parameters

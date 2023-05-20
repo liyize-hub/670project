@@ -1,5 +1,4 @@
-#!/bin/bash
-# define ip and file/webpage
+
 ip=www.umass.edu/index.html
 
 # compile retriever

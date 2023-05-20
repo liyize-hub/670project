@@ -1,5 +1,3 @@
-// Created by Duncan Spani and Jayden Stipek
-// 2020/11/11
 
 #include <sys/socket.h> // socket, bind, listen, inet_ntoa
 #include <sys/time.h>   //for gettimeofday()
@@ -164,9 +162,9 @@ int callGetRequest(int socketFD)
     // create a databuffer
     char databuf[bufSize];
     // receieve the file information
-
     recv(socketFD, &databuf, bufSize, 0);
     // 2) Allocate databuf[nbufs][bufsize] if the sizes are the same.
+    cout << bufSize << endl;
     for (int i = 0; i < bufSize; i++)
     {
         outputFile << databuf[i];
